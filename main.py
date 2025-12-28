@@ -149,20 +149,37 @@ def chat():
         return jsonify({"reply": "Not logged in."})
 
     msg = request.json["message"]
+    history = request.json.get("history", [])
+    
     is_math, result = try_math(msg)
     if is_math:
         return jsonify({"reply": f"The answer is: {result}"})
+
+    # Generate title if it's the first message
+    title = None
+    if not history:
+        try:
+            title_response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {"role": "system", "content": "Create a short 2-4 word topic/title for this conversation based on the user's first sentence. If you can't figure it out, respond with 'Untitled Conversation'. Output ONLY the title."},
+                    {"role": "user", "content": msg}
+                ],
+                max_tokens=10
+            )
+            title = title_response.choices[0].message.content.strip().strip('"')
+        except:
+            title = "Untitled Conversation"
 
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": msg}
-        ]
+        ] + history + [{"role": "user", "content": msg}]
     )
 
     reply = response.choices[0].message.content
-    return jsonify({"reply": reply})
+    return jsonify({"reply": reply, "title": title})
 
 @app.after_request
 def allow_iframe(response):

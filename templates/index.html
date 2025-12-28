@@ -324,7 +324,7 @@
         chatbox.scrollTop = chatbox.scrollHeight;
     }
 
-    function addMessage(text, sender, save = true) {
+    function addMessage(text, sender, save = true, title = null) {
         const div = document.createElement("div");
         div.className = "msg " + sender;
         div.textContent = text;
@@ -335,10 +335,13 @@
             const convo = conversations[currentConversationId];
             convo.messages.push({ text, sender });
 
-            if (sender === "user" && convo.title === "New chat") {
+            if (title) {
+                convo.title = title;
+            } else if (sender === "user" && convo.title === "New chat") {
+                // Fallback local title generation if API didn't provide one yet
                 let first = text.split(/[.!?]/)[0].trim();
                 if (first.length > 40) first = first.slice(0, 40) + "...";
-                convo.title = first;
+                convo.title = first || "Untitled Conversation";
             }
 
             saveConvos();
@@ -352,6 +355,13 @@
 
         if (!currentConversationId) createConversation();
 
+        const convo = conversations[currentConversationId];
+        // Prepare history for API
+        const history = convo.messages.map(m => ({
+            role: m.sender === "user" ? "user" : "assistant",
+            content: m.text
+        }));
+
         addMessage(text, "user");
         messageInput.value = "";
 
@@ -360,12 +370,13 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 message: text,
+                history: history,
                 conversation_id: currentConversationId
             })
         });
 
         const data = await res.json();
-        addMessage(data.reply, "bot");
+        addMessage(data.reply, "bot", true, data.title);
     }
 
     sendBtn.onclick = sendMessage;
