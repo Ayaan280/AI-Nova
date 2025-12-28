@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nova AI</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            background: #050509;
+            color: #f5f5f5;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        #sidebar {
+            width: 260px;
+            background: #0c0c12;
+            border-right: 1px solid #1f1f2d;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #new-chat {
+            padding: 10px;
+            background: #1a1a26;
+            border: 1px solid #2c2c3d;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        #new-chat:hover { background: #222233; }
+
+        #logout-btn {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            border: 1px solid #2c2c3d;
+            background: #0b1120;
+            color: #e5e7eb;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        #logout-btn:hover { background: #111827; }
+
+        .section-title {
+            font-size: 11px;
+            color: #8a8aa5;
+            margin: 10px 0 6px;
+            text-transform: uppercase;
+        }
+
+        .conversation-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .conversation-item {
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #d0d0ff;
+            cursor: pointer;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .conversation-item:hover { background: #14141f; }
+        .conversation-item.active { background: #1e293b; }
+
+        /* MAIN AREA */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* HEADER */
+        #header {
+            display: flex;
+            align-items: center;
+            padding: 14px 18px;
+            background: #050509;
+            border-bottom: 1px solid #1f1f2d;
+        }
+
+        #logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: radial-gradient(circle at 30% 20%, #66ccff, #0066ff 60%, #001133);
+            box-shadow: 0 0 18px rgba(0, 128, 255, 0.7);
+            margin-right: 10px;
+            position: relative;
+        }
+
+        #logo::after {
+            content: "N";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -53%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #f5f9ff;
+        }
+
+        #title-block { display: flex; flex-direction: column; }
+        #title { font-size: 18px; font-weight: bold; }
+        #subtitle { font-size: 12px; color: #9ca3af; }
+
+        /* CHATBOX */
+        #chatbox {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            height: calc(100vh - 140px);
+        }
+
+        .msg {
+            margin: 10px 0;
+            padding: 11px 14px;
+            border-radius: 12px;
+            max-width: 70%;
+            line-height: 1.4;
+            font-size: 14px;
+            animation: fadeIn 0.18s ease-out forwards;
+        }
+
+        .user { background: #1d4ed8; color: white; margin-left: auto; }
+        .bot { background: #0b1120; border: 1px solid #1f2937; color: #e5e7eb; }
+
+        /* INPUT AREA */
+        #input-area {
+            display: flex;
+            padding: 12px 14px;
+            background: #050509;
+            border-top: 1px solid #1f1f2d;
+        }
+
+        #message {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 999px;
+            border: 1px solid #1f2937;
+            background: #020617;
+            color: #f9fafb;
+            outline: none;
+            font-size: 14px;
+        }
+
+        #send {
+            padding: 9px 18px;
+            margin-left: 10px;
+            background: #1d4ed8;
+            border: none;
+            border-radius: 999px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        #send:hover { background: #2563eb; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 999px; }
+    </style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+
+    <div id="new-chat">+ New chat</div>
+
+    <div style="font-size: 12px; color: #9ca3af; margin-bottom: 10px;">
+        Logged in as: {{ username }}
+    </div>
+
+    <button id="logout-btn">Log out</button>
+
+    <div class="conversation-list" id="convo-list">
+        <div class="section-title">Today</div>
+        <div id="today-convos"></div>
+
+        <div class="section-title">Yesterday</div>
+        <div id="yesterday-convos"></div>
+
+        <div class="section-title">Older</div>
+        <div id="older-convos"></div>
+    </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+    <div id="header">
+        <div id="logo"></div>
+        <div id="title-block">
+            <div id="title">Nova AI</div>
+            <div id="subtitle">Chat with your AI assistant</div>
+        </div>
+    </div>
+
+    <div id="chatbox"></div>
+
+    <div id="input-area">
+        <input id="message" type="text" placeholder="Message Nova...">
+        <button id="send">Send</button>
+    </div>
+</div>
+
+<script>
+    let conversations = {};
+    let currentConversationId = null;
+
+    const chatbox = document.getElementById("chatbox");
+    const messageInput = document.getElementById("message");
+    const sendBtn = document.getElementById("send");
+
+    const newChatBtn = document.getElementById("new-chat");
+    const logoutBtn = document.getElementById("logout-btn");
+
+    const todayDiv = document.getElementById("today-convos");
+    const yesterdayDiv = document.getElementById("yesterday-convos");
+    const olderDiv = document.getElementById("older-convos");
+
+    logoutBtn.onclick = () => {
+        window.location.href = "/logout";
+    };
+
+    async function loadConvos() {
+        const res = await fetch("/load_convos");
+        conversations = await res.json();
+    }
+
+    async function saveConvos() {
+        await fetch("/save_convos", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(conversations)
+        });
+    }
+
+    function createConversation() {
+        const id = "convo-" + Date.now();
+        conversations[id] = {
+            id,
+            title: "New chat",
+            createdAt: new Date().toISOString(),
+            messages: []
+        };
+        currentConversationId = id;
+        saveConvos();
+        renderConversations();
+        renderMessages();
+    }
+
+    function getDayBucket(date) {
+        const now = new Date();
+        const d = new Date(date);
+
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const other = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+        const diff = (today - other) / (1000 * 60 * 60 * 24);
+
+        if (diff === 0) return "today";
+        if (diff === 1) return "yesterday";
+        return "older";
+    }
+
+    function renderConversations() {
+        todayDiv.innerHTML = "";
+        yesterdayDiv.innerHTML = "";
+        olderDiv.innerHTML = "";
+
+        const list = Object.values(conversations)
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        for (const convo of list) {
+            const div = document.createElement("div");
+            div.className = "conversation-item" + (convo.id === currentConversationId ? " active" : "");
+            div.textContent = convo.title;
+            div.onclick = () => {
+                currentConversationId = convo.id;
+                renderConversations();
+                renderMessages();
+            };
+
+            const bucket = getDayBucket(convo.createdAt);
+            if (bucket === "today") todayDiv.appendChild(div);
+            else if (bucket === "yesterday") yesterdayDiv.appendChild(div);
+            else olderDiv.appendChild(div);
+        }
+    }
+
+    function renderMessages() {
+        chatbox.innerHTML = "";
+        if (!currentConversationId) return;
+
+        const convo = conversations[currentConversationId];
+        for (const msg of convo.messages) {
+            addMessage(msg.text, msg.sender, false);
+        }
+        chatbox.scrollTop = chatbox.scrollHeight;
+    }
+
+    function addMessage(text, sender, save = true) {
+        const div = document.createElement("div");
+        div.className = "msg " + sender;
+        div.textContent = text;
+        chatbox.appendChild(div);
+        chatbox.scrollTop = chatbox.scrollHeight;
+
+        if (save) {
+            const convo = conversations[currentConversationId];
+            convo.messages.push({ text, sender });
+
+            if (sender === "user" && convo.title === "New chat") {
+                let first = text.split(/[.!?]/)[0].trim();
+                if (first.length > 40) first = first.slice(0, 40) + "...";
+                convo.title = first;
+            }
+
+            saveConvos();
+            renderConversations();
+        }
+    }
+
+    async function sendMessage() {
+        const text = messageInput.value.trim();
+        if (!text) return;
+
+        if (!currentConversationId) createConversation();
+
+        addMessage(text, "user");
+        messageInput.value = "";
+
+        const res = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                message: text,
+                conversation_id: currentConversationId
+            })
+        });
+
+        const data = await res.json();
+        addMessage(data.reply, "bot");
+    }
+
+    sendBtn.onclick = sendMessage;
+    messageInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    newChatBtn.onclick = createConversation;
+
+    (async () => {
+        await loadConvos();
+        const list = Object.values(conversations);
+        if (list.length === 0) createConversation();
+        else currentConversationId = list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0].id;
+
+        renderConversations();
+        renderMessages();
+    })();
+</script>
+
+</body>
+</html>
