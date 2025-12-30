@@ -5,7 +5,7 @@ import hashlib
 import json
 import sqlite3
 import ast, operator, re
-import google.generativeai as genai
+from openai import OpenAI
 import base64
 
 # ---------------- FLASK APP ----------------
@@ -15,14 +15,11 @@ app.secret_key = os.environ.get("FLASK_SECRET", "dev-secret")
 
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
-# Replit AI Integrations setup for Gemini
+# OpenAI AI Integrations setup
 # Note: This internally uses Replit AI Integrations, does not require your own API key, and charges are billed to your credits.
-genai.configure(
-    api_key=os.environ.get("AI_INTEGRATIONS_GEMINI_API_KEY"),
-    transport="rest",
-    client_options={
-        "api_endpoint": os.environ.get("AI_INTEGRATIONS_GEMINI_BASE_URL")
-    }
+openai_client = OpenAI(
+    api_key=os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY"),
+    base_url=os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL")
 )
 
 SYSTEM_PROMPT = (
@@ -256,11 +253,15 @@ def generate_image():
         return jsonify({"error": "No prompt provided."})
     
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash-image")
-        result = model.generate_content(prompt)
-        # Replit AI Integrations returns image as bytes in the first part
-        image_bytes = result.candidates[0].content.parts[0].inline_data.data
-        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+        # newest OpenAI model is "gpt-5" which was released August 7, 2025.
+        # do not change this unless explicitly requested by the user
+        response = openai_client.images.generate(
+            model="gpt-image-1",
+            prompt=prompt,
+            n=1,
+            size="1024x1024"
+        )
+        image_b64 = response.data[0].b64_json
         return jsonify({"image": f"data:image/png;base64,{image_b64}"})
     except Exception as e:
         return jsonify({"error": str(e)})
