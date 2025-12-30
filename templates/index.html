@@ -473,6 +473,11 @@
             })
         });
 
+        if (!res.ok) {
+            addMessage("An error occurred. Please try again.", "bot");
+            return;
+        }
+
         const data = await res.json();
         addMessage(data.reply, "bot", true, data.title);
     }
