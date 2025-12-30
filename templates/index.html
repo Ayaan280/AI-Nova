@@ -440,11 +440,11 @@
                     convo.messages.push({ text: data.image, sender: "bot", type: "image" });
                     saveConvos();
                 } else {
-                    addMessage("Error generating image: " + (data.error || "Unknown error"), "bot");
+                    addMessage("There was a error generating your image, please try something else other than this image", "bot");
                 }
             } catch (err) {
                 console.error(err);
-                addMessage("An error occurred during image generation.", "bot");
+                addMessage("There was a error generating your image, please try something else other than this image", "bot");
             } finally {
                 // Ensure loading message is removed
                 if (loadingDiv.parentNode) {
