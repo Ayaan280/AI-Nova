@@ -413,23 +413,31 @@
                 loadingDiv.remove();
 
                 if (data.image) {
-                const img = document.createElement("img");
-                img.src = data.image;
-                img.style.maxWidth = "100%";
-                img.style.borderRadius = "8px";
-                img.style.marginTop = "10px";
-                const div = document.createElement("div");
-                div.className = "msg bot";
-                div.appendChild(img);
-                chatbox.appendChild(div);
-                chatbox.scrollTop = chatbox.scrollHeight;
-                
-                // Save to history as a special type if needed, but for now just display
-                const convo = conversations[currentConversationId];
-                convo.messages.push({ text: "[Image Generated]", sender: "bot" });
-                saveConvos();
-            } else {
-                addMessage("Error generating image: " + (data.error || "Unknown error"), "bot");
+                    const img = document.createElement("img");
+                    img.src = data.image;
+                    img.style.maxWidth = "100%";
+                    img.style.borderRadius = "8px";
+                    img.style.marginTop = "10px";
+                    const div = document.createElement("div");
+                    div.className = "msg bot";
+                    div.appendChild(img);
+                    chatbox.appendChild(div);
+                    chatbox.scrollTop = chatbox.scrollHeight;
+                    
+                    const convo = conversations[currentConversationId];
+                    convo.messages.push({ text: "[Image Generated]", sender: "bot" });
+                    saveConvos();
+                } else {
+                    addMessage("Error generating image: " + (data.error || "Unknown error"), "bot");
+                }
+            } catch (err) {
+                console.error(err);
+                addMessage("An error occurred during image generation.", "bot");
+            } finally {
+                // Ensure loading message is removed
+                if (loadingDiv.parentNode) {
+                    loadingDiv.remove();
+                }
             }
             return;
         }
