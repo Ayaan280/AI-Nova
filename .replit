@@ -18,6 +18,7 @@ externalPort = 80
 
 [agent]
 expertMode = true
+integrations = ["python_gemini_ai_integrations:1.0.0"]
 
 [workflows]
 runButton = "Project"

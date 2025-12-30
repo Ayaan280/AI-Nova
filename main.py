@@ -3,16 +3,21 @@ from groq import Groq
 import os
 import hashlib
 import json
+import sqlite3
+import ast, operator, re
+import google.generativeai as genai
+import base64
 
-try:
-    from replit import db
-except ImportError:
-    db = None
+# ---------------- FLASK APP ----------------
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", "dev-secret")
 
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
+
+# Replit AI Integrations setup for Gemini
+# Note: This internally uses Replit AI Integrations, does not require your own API key, and charges are billed to your credits.
+genai.configure(transport="rest")
 
 SYSTEM_PROMPT = (
     "You speak with Ayaan-style energy: friendly, casual, and lightly playful. "
@@ -28,32 +33,71 @@ SYSTEM_PROMPT = (
     "Your name is Nova. You are smart you know everything and help with anything in the world."
 )
 
+# ---------------- SQLITE HELPERS ----------------
+
+def get_db():
+    conn = sqlite3.connect("nova.db")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT NOT NULL
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS convos (
+            username TEXT PRIMARY KEY,
+            data TEXT NOT NULL
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+init_db()
+
 # ---------------- PASSWORD HELPERS ----------------
 
 def hash_password(p):
     return hashlib.sha256(p.encode()).hexdigest()
 
 def create_user(username, password):
-    if db is None:
+    conn = get_db()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("INSERT INTO users (username, password) VALUES (?, ?)",
+                    (username, hash_password(password)))
+        cur.execute("INSERT INTO convos (username, data) VALUES (?, ?)",
+                    (username, "{}"))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
         return False
-    key = f"user:{username}"
-    if key in db:
-        return False
-    db[key] = hash_password(password)
-    db[f"convos:{username}"] = "{}"
-    return True
+    finally:
+        conn.close()
 
 def verify_user(username, password):
-    if db is None:
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("SELECT password FROM users WHERE username = ?", (username,))
+    row = cur.fetchone()
+    conn.close()
+
+    if row is None:
         return False
-    key = f"user:{username}"
-    if key not in db:
-        return False
-    return db[key] == hash_password(password)
+
+    return row["password"] == hash_password(password)
 
 # ---------------- MATH SOLVER ----------------
-
-import ast, operator, re
 
 _ALLOWED = {
     ast.Add: operator.add,
@@ -125,23 +169,36 @@ def home():
         return redirect("/login")
     return render_template("index.html", username=session["username"])
 
-# ---------------- CHAT API ----------------
+# ---------------- CONVERSATION STORAGE ----------------
 
 @app.route("/load_convos", methods=["GET"])
 def load_convos():
     if "username" not in session:
         return jsonify({})
-    key = f"convos:{session['username']}"
-    raw = db.get(key, "{}")
-    return jsonify(json.loads(raw))
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT data FROM convos WHERE username = ?", (session["username"],))
+    row = cur.fetchone()
+    conn.close()
+
+    return jsonify(json.loads(row["data"]) if row else {})
 
 @app.route("/save_convos", methods=["POST"])
 def save_convos():
     if "username" not in session:
         return jsonify({"ok": False})
-    key = f"convos:{session['username']}"
-    db[key] = json.dumps(request.json)
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE convos SET data = ? WHERE username = ?",
+                (json.dumps(request.json), session["username"]))
+    conn.commit()
+    conn.close()
+
     return jsonify({"ok": True})
+
+# ---------------- CHAT API ----------------
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -150,7 +207,7 @@ def chat():
 
     msg = request.json["message"]
     history = request.json.get("history", [])
-    
+
     is_math, result = try_math(msg)
     if is_math:
         return jsonify({"reply": f"The answer is: {result}"})
@@ -181,11 +238,36 @@ def chat():
     reply = response.choices[0].message.content
     return jsonify({"reply": reply, "title": title})
 
+# ---------------- IMAGE GENERATION API ----------------
+
+@app.route("/generate_image", methods=["POST"])
+def generate_image():
+    if "username" not in session:
+        return jsonify({"error": "Not logged in."})
+    
+    prompt = request.json.get("prompt")
+    if not prompt:
+        return jsonify({"error": "No prompt provided."})
+    
+    try:
+        model = genai.GenerativeModel("gemini-2.5-flash-image")
+        result = model.generate_content(prompt)
+        # Replit AI Integrations returns image as bytes in the first part
+        image_bytes = result.candidates[0].content.parts[0].inline_data.data
+        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+        return jsonify({"image": f"data:image/png;base64,{image_b64}"})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+# ---------------- IFRAME ALLOW ----------------
+
 @app.after_request
 def allow_iframe(response):
     response.headers["X-Frame-Options"] = "ALLOWALL"
     response.headers["Content-Security-Policy"] = "frame-ancestors *"
     return response
+
+# ---------------- RUN APP ----------------
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

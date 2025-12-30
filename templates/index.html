@@ -223,6 +223,7 @@
     <div id="chatbox"></div>
 
     <div id="input-area">
+        <button id="mode-toggle" title="Switch to Image Generation">🎨</button>
         <input id="message" type="text" placeholder="Message Nova...">
         <button id="send">Send</button>
     </div>
@@ -231,10 +232,18 @@
 <script>
     let conversations = {};
     let currentConversationId = null;
+    let imageMode = false;
 
     const chatbox = document.getElementById("chatbox");
     const messageInput = document.getElementById("message");
     const sendBtn = document.getElementById("send");
+    const modeToggle = document.getElementById("mode-toggle");
+
+    modeToggle.onclick = () => {
+        imageMode = !imageMode;
+        modeToggle.style.background = imageMode ? "#10b981" : "#1d4ed8";
+        messageInput.placeholder = imageMode ? "Describe an image to generate..." : "Message Nova...";
+    };
 
     const newChatBtn = document.getElementById("new-chat");
     const logoutBtn = document.getElementById("logout-btn");
@@ -354,6 +363,38 @@
         if (!text) return;
 
         if (!currentConversationId) createConversation();
+
+        addMessage(text, "user");
+        messageInput.value = "";
+
+        if (imageMode) {
+            const res = await fetch("/generate_image", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: text })
+            });
+            const data = await res.json();
+            if (data.image) {
+                const img = document.createElement("img");
+                img.src = data.image;
+                img.style.maxWidth = "100%";
+                img.style.borderRadius = "8px";
+                img.style.marginTop = "10px";
+                const div = document.createElement("div");
+                div.className = "msg bot";
+                div.appendChild(img);
+                chatbox.appendChild(div);
+                chatbox.scrollTop = chatbox.scrollHeight;
+                
+                // Save to history as a special type if needed, but for now just display
+                const convo = conversations[currentConversationId];
+                convo.messages.push({ text: "[Image Generated]", sender: "bot" });
+                saveConvos();
+            } else {
+                addMessage("Error generating image: " + (data.error || "Unknown error"), "bot");
+            }
+            return;
+        }
 
         const convo = conversations[currentConversationId];
         // Prepare history for API
