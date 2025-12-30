@@ -150,6 +150,21 @@
             border-top: 1px solid #1f1f2d;
         }
 
+        #mode-toggle {
+            padding: 9px 12px;
+            margin-right: 10px;
+            background: #1d4ed8;
+            border: none;
+            border-radius: 999px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        #mode-toggle:hover { background: #2563eb; }
+
         #message {
             flex: 1;
             padding: 10px 12px;
@@ -223,7 +238,7 @@
     <div id="chatbox"></div>
 
     <div id="input-area">
-        <button id="mode-toggle" title="Switch to Image Generation">🎨</button>
+        <button id="mode-toggle">Generate Image</button>
         <input id="message" type="text" placeholder="Message Nova...">
         <button id="send">Send</button>
     </div>
@@ -242,6 +257,7 @@
     modeToggle.onclick = () => {
         imageMode = !imageMode;
         modeToggle.style.background = imageMode ? "#10b981" : "#1d4ed8";
+        modeToggle.textContent = imageMode ? "Chat Mode" : "Generate Image";
         messageInput.placeholder = imageMode ? "Describe an image to generate..." : "Message Nova...";
     };
 

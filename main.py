@@ -17,7 +17,13 @@ client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
 # Replit AI Integrations setup for Gemini
 # Note: This internally uses Replit AI Integrations, does not require your own API key, and charges are billed to your credits.
-genai.configure(transport="rest")
+genai.configure(
+    api_key=os.environ.get("AI_INTEGRATIONS_GEMINI_API_KEY"),
+    transport="rest",
+    client_options={
+        "api_endpoint": os.environ.get("AI_INTEGRATIONS_GEMINI_BASE_URL")
+    }
+)
 
 SYSTEM_PROMPT = (
     "You speak with Ayaan-style energy: friendly, casual, and lightly playful. "
