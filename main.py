@@ -231,11 +231,22 @@ def chat():
         except:
             title = "Untitled Conversation"
 
+    # Filter history for API (limit context)
+    filtered_history = []
+    for m in history:
+        # Exclude image tokens or very large text to prevent context limit errors
+        if "[Image Generated]" in m.get("content", "") or len(m.get("content", "")) > 2000:
+            continue
+        filtered_history.append(m)
+    
+    # Keep only the last 10 messages for context to keep it snappy
+    filtered_history = filtered_history[-10:]
+
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-        ] + history + [{"role": "user", "content": msg}]
+        ] + filtered_history + [{"role": "user", "content": msg}]
     )
 
     reply = response.choices[0].message.content
