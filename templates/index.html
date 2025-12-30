@@ -358,6 +358,7 @@
 
         if (save) {
             const convo = conversations[currentConversationId];
+            if (!convo) return; // Guard against missing convo
             convo.messages.push({ text, sender });
 
             if (title) {
@@ -430,8 +431,7 @@
             content: m.text
         }));
 
-        addMessage(text, "user");
-        messageInput.value = "";
+        // Removed extra addMessage call that was causing duplicates
 
         const res = await fetch("/chat", {
             method: "POST",
