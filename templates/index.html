@@ -189,6 +189,13 @@
 
         #send:hover { background: #2563eb; }
 
+        .msg.loading-msg {
+            color: #8a8aa5;
+            font-style: italic;
+            border: 1px dashed #2c2c3d;
+            background: rgba(11, 17, 32, 0.5);
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(4px); }
             to { opacity: 1; transform: translateY(0); }
@@ -392,17 +399,20 @@
             chatbox.appendChild(loadingDiv);
             chatbox.scrollTop = chatbox.scrollHeight;
 
-            const res = await fetch("/generate_image", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ prompt: text })
-            });
-            const data = await res.json();
-            
-            // Remove loading message
-            loadingDiv.remove();
+            console.log("Loading message added"); // Debug log
 
-            if (data.image) {
+            try {
+                const res = await fetch("/generate_image", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt: text })
+                });
+                const data = await res.json();
+                
+                // Remove loading message
+                loadingDiv.remove();
+
+                if (data.image) {
                 const img = document.createElement("img");
                 img.src = data.image;
                 img.style.maxWidth = "100%";
