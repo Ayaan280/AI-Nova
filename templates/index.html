@@ -384,12 +384,23 @@
         messageInput.value = "";
 
         if (imageMode) {
+            // Show loading message
+            const loadingDiv = document.createElement("div");
+            loadingDiv.className = "msg bot loading-msg";
+            loadingDiv.textContent = "generating your image.......";
+            chatbox.appendChild(loadingDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+
             const res = await fetch("/generate_image", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ prompt: text })
             });
             const data = await res.json();
+            
+            // Remove loading message
+            loadingDiv.remove();
+
             if (data.image) {
                 const img = document.createElement("img");
                 img.src = data.image;
