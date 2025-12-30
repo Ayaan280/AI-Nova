@@ -258,7 +258,6 @@ def generate_image():
         response = openai_client.images.generate(
             model="gpt-image-1",
             prompt=prompt,
-            n=1,
             size="1024x1024"
         )
         image_b64 = response.data[0].b64_json
