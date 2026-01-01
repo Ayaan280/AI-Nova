@@ -264,15 +264,18 @@ def chat():
     # Keep only the last 10 messages for context to keep it snappy
     filtered_history = filtered_history[-10:]
 
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-        ] + filtered_history + [{"role": "user", "content": msg}]
-    )
-
-    reply = response.choices[0].message.content
-    return jsonify({"reply": reply, "title": title})
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+            ] + filtered_history + [{"role": "user", "content": msg}]
+        )
+        reply = response.choices[0].message.content
+        return jsonify({"reply": reply, "title": title})
+    except Exception as e:
+        print(f"Chat error: {e}")
+        return jsonify({"reply": "Nova is having a bit of trouble connecting right now. Try again in a second!", "title": title})
 
 # ---------------- IMAGE GENERATION API ----------------
 
@@ -288,13 +291,18 @@ def generate_image():
     try:
         # 1. Try Replit OpenAI Integration first
         if openai_client:
-            response = openai_client.images.generate(
-                model="gpt-image-1",
-                prompt=prompt,
-                size="1024x1024",
-                response_format="b64_json"
-            )
-            return jsonify({"image": f"data:image/png;base64,{response.data[0].b64_json}"})
+            try:
+                response = openai_client.images.generate(
+                    model="gpt-image-1",
+                    prompt=prompt,
+                    size="1024x1024",
+                    response_format="b64_json"
+                )
+                if response and response.data:
+                    return jsonify({"image": f"data:image/png;base64,{response.data[0].b64_json}"})
+            except Exception as openai_err:
+                print(f"OpenAI error: {openai_err}")
+                # Fall through to Stability if OpenAI fails
             
         # 2. Fallback to Stability AI for External Hosting
         if stability_api:
