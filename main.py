@@ -15,14 +15,34 @@ app.secret_key = os.environ.get("FLASK_SECRET", "dev-secret")
 
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
-# OpenAI client setup
-# Supports Replit AI Integrations and standard OpenAI API keys
+import base64
+import io
+from stability_sdk import client
+import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
+
+# ... existing imports
+
+# OpenAI client setup (for Replit)
 def get_openai_client():
-    api_key = os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
-    base_url = os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL") or "https://api.openai.com/v1"
-    return OpenAI(api_key=api_key, base_url=base_url)
+    api_key = os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY")
+    base_url = os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL")
+    if api_key and base_url:
+        return OpenAI(api_key=api_key, base_url=base_url)
+    return None
 
 openai_client = get_openai_client()
+
+# Stability AI setup (for External Hosting)
+def get_stability_api():
+    api_key = os.environ.get("STABILITY_API_KEY")
+    if api_key:
+        return client.StabilityInference(
+            key=api_key,
+            verbose=True,
+        )
+    return None
+
+stability_api = get_stability_api()
 
 SYSTEM_PROMPT = (
     "You speak with Ayaan-style energy: friendly, casual, and lightly playful. "
@@ -266,20 +286,31 @@ def generate_image():
         return jsonify({"error": "No prompt provided."})
     
     try:
-        # Check if we're on Replit for model naming
-        is_replit = "replit" in (os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL") or "").lower()
-        model = "gpt-image-1" if is_replit else "dall-e-3"
+        # 1. Try Replit OpenAI Integration first
+        if openai_client:
+            response = openai_client.images.generate(
+                model="gpt-image-1",
+                prompt=prompt,
+                size="1024x1024",
+                response_format="b64_json"
+            )
+            return jsonify({"image": f"data:image/png;base64,{response.data[0].b64_json}"})
+            
+        # 2. Fallback to Stability AI for External Hosting
+        if stability_api:
+            answers = stability_api.generate(
+                prompt=prompt,
+                width=1024,
+                height=1024,
+                samples=1,
+            )
+            for resp in answers:
+                for artifact in resp.artifacts:
+                    if artifact.type == generation.ARTIFACT_IMAGE:
+                        img_b64 = base64.b64encode(artifact.binary).decode("utf-8")
+                        return jsonify({"image": f"data:image/png;base64,{img_b64}"})
         
-        # newest OpenAI model is "gpt-5" which was released August 7, 2025.
-        # do not change this unless explicitly requested by the user
-        response = openai_client.images.generate(
-            model=model,
-            prompt=prompt,
-            size="1024x1024",
-            response_format="b64_json"
-        )
-        image_b64 = response.data[0].b64_json
-        return jsonify({"image": f"data:image/png;base64,{image_b64}"})
+        return jsonify({"error": "No image generation service configured (Need STABILITY_API_KEY on Render)."})
     except Exception as e:
         return jsonify({"error": str(e)})
 

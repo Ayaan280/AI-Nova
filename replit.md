@@ -58,7 +58,7 @@ Preferred communication style: Simple, everyday language.
 ### Render Deployment (External Hosting)
 To host Nova AI on Render, you must set the following Environment Variables in your Render Dashboard:
 - `GROQ_API_KEY`: Your Groq API key.
-- `OPENAI_API_KEY`: Your OpenAI API key (for image generation).
+- `STABILITY_API_KEY`: Your Stability AI API key (for image generation).
 - `FLASK_SECRET`: A random string for session security.
 
-**Note**: Replit AI Integrations only work while hosted on Replit. For external hosting, the code will automatically use your standard `OPENAI_API_KEY`.
+**Note**: Replit AI Integrations only work while hosted on Replit. For external hosting, the code will automatically use your `STABILITY_API_KEY`.
