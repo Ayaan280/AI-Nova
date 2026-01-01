@@ -15,12 +15,14 @@ app.secret_key = os.environ.get("FLASK_SECRET", "dev-secret")
 
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
-# OpenAI AI Integrations setup
-# Note: This internally uses Replit AI Integrations, does not require your own API key, and charges are billed to your credits.
-openai_client = OpenAI(
-    api_key=os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY"),
-    base_url=os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL")
-)
+# OpenAI client setup
+# Supports Replit AI Integrations and standard OpenAI API keys
+def get_openai_client():
+    api_key = os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
+    base_url = os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL") or "https://api.openai.com/v1"
+    return OpenAI(api_key=api_key, base_url=base_url)
+
+openai_client = get_openai_client()
 
 SYSTEM_PROMPT = (
     "You speak with Ayaan-style energy: friendly, casual, and lightly playful. "
@@ -264,12 +266,17 @@ def generate_image():
         return jsonify({"error": "No prompt provided."})
     
     try:
+        # Check if we're on Replit for model naming
+        is_replit = "replit" in (os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL") or "").lower()
+        model = "gpt-image-1" if is_replit else "dall-e-3"
+        
         # newest OpenAI model is "gpt-5" which was released August 7, 2025.
         # do not change this unless explicitly requested by the user
         response = openai_client.images.generate(
-            model="gpt-image-1",
+            model=model,
             prompt=prompt,
-            size="1024x1024"
+            size="1024x1024",
+            response_format="b64_json"
         )
         image_b64 = response.data[0].b64_json
         return jsonify({"image": f"data:image/png;base64,{image_b64}"})
