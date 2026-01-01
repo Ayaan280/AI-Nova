@@ -55,6 +55,10 @@ Preferred communication style: Simple, everyday language.
 - **Groq API** - Provides LLM capabilities for chat responses
 - **Replit DB** - Key-value database for user accounts and conversation storage
 
-### Environment Variables Required
-- `GROQ_API_KEY` - API key for Groq service
-- `FLASK_SECRET` - Secret key for Flask session management (falls back to "dev-secret")
+### Render Deployment (External Hosting)
+To host Nova AI on Render, you must set the following Environment Variables in your Render Dashboard:
+- `GROQ_API_KEY`: Your Groq API key.
+- `OPENAI_API_KEY`: Your OpenAI API key (for image generation).
+- `FLASK_SECRET`: A random string for session security.
+
+**Note**: Replit AI Integrations only work while hosted on Replit. For external hosting, the code will automatically use your standard `OPENAI_API_KEY`.
