@@ -274,7 +274,9 @@ def chat():
 # ---------------- IMAGE GENERATION API ----------------
 
 def query_hf(model_id, prompt, api_key):
-    url = f"https://api-inference.huggingface.co/models/{model_id}"
+    # The error logs show that api-inference.huggingface.co is deprecated.
+    # We must use router.huggingface.co instead.
+    url = f"https://router.huggingface.co/hf-inference/models/{model_id}"
     headers = {"Authorization": f"Bearer {api_key}"}
     payload = {"inputs": prompt, "options": {"wait_for_model": True}}
     
