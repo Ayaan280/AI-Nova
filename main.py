@@ -9,6 +9,7 @@ from openai import OpenAI
 import base64
 import io
 import threading
+import requests
 
 # ---------------- FLASK APP ----------------
 
@@ -311,12 +312,17 @@ def generate_image():
                     model="gpt-image-1",
                     prompt=prompt,
                     size="1024x1024"
-                    # Note: response_format='b64_json' is not supported by gpt-image-1 on Replit
                 )
                 if response and response.data:
-                    # gpt-image-1 on Replit returns a URL
+                    # Replit returns a URL. Convert to base64 for history storage consistency
                     image_url = response.data[0].url
-                    return jsonify({"image": image_url})
+                    img_response = requests.get(image_url)
+                    if img_response.status_code == 200:
+                        img_b64 = base64.b64encode(img_response.content).decode("utf-8")
+                        return jsonify({"image": f"data:image/png;base64,{img_b64}"})
+                    else:
+                        # Fallback to direct URL if base64 conversion fails
+                        return jsonify({"image": image_url})
             except Exception as openai_err:
                 print(f"OpenAI error: {openai_err}")
                 # Fall through to Stability if OpenAI fails
