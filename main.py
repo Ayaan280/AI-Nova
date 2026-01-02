@@ -8,8 +8,7 @@ import ast, operator, re
 from openai import OpenAI
 import base64
 import io
-import subprocess
-import sys
+import threading
 
 # ---------------- FLASK APP ----------------
 
@@ -29,35 +28,36 @@ def get_openai_client():
 openai_client = get_openai_client()
 
 # Stability AI setup (for External Hosting)
-# We handle installation dynamically to bypass Render's build-time gRPC issues
-def get_stability_api():
+# Global variable to store the API instance
+stability_api = None
+
+def load_stability_api_background():
+    global stability_api
     api_key = os.environ.get("STABILITY_API_KEY")
     if not api_key:
-        return None
-    
+        return
+
     try:
         from stability_sdk import client as stability_client
-    except ImportError:
-        print("Stability SDK not found. Attempting to install...")
-        try:
-            # Install without dependencies first to avoid grpcio build issues
-            # then try to import again. This is a workaround for Render.
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "stability-sdk"])
-            from stability_sdk import client as stability_client
-        except Exception as e:
-            print(f"Failed to install/import Stability SDK: {e}")
-            return None
-            
-    try:
-        return stability_client.StabilityInference(
+        stability_api = stability_client.StabilityInference(
             key=api_key,
             verbose=True,
         )
+        print("Stability AI loaded successfully!")
+    except ImportError:
+        import subprocess
+        import sys
+        print("Stability SDK missing. Installing in background...")
+        try:
+            # Install in background to not block startup
+            subprocess.Popen([sys.executable, "-m", "pip", "install", "stability-sdk"])
+        except Exception as e:
+            print(f"Background install failed: {e}")
     except Exception as e:
-        print(f"Stability SDK setup error: {e}")
-        return None
+        print(f"Stability setup error: {e}")
 
-stability_api = get_stability_api()
+# Start the loading/installation in a separate thread so Render sees the port immediately
+threading.Thread(target=load_stability_api_background, daemon=True).start()
 
 SYSTEM_PROMPT = (
     "You speak with Ayaan-style energy: friendly, casual, and lightly playful. "
@@ -320,10 +320,19 @@ def generate_image():
                 # Fall through to Stability if OpenAI fails
             
         # 2. Fallback to Stability AI for External Hosting
-        # Refresh the stability_api object in case it was installed after startup
         global stability_api
         if not stability_api:
-            stability_api = get_stability_api()
+            # Check if it finished installing in background
+            api_key = os.environ.get("STABILITY_API_KEY")
+            if api_key:
+                try:
+                    from stability_sdk import client as stability_client
+                    stability_api = stability_client.StabilityInference(
+                        key=api_key,
+                        verbose=True,
+                    )
+                except ImportError:
+                    pass # Still installing...
             
         if stability_api:
             import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation

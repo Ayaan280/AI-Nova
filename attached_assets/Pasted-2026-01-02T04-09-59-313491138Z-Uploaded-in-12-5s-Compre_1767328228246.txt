@@ -1,0 +1,50 @@
+2026-01-02T04:09:59.313491138Z ==> Uploaded in 12.5s. Compression took 3.7s
+2026-01-02T04:09:59.429750911Z ==> Build successful 🎉
+2026-01-02T04:10:04.964820054Z ==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+2026-01-02T04:10:04.984122613Z ==> Deploying...
+2026-01-02T04:11:16.518215527Z      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 26.3/26.3 MB 12.1 MB/s eta 0:00:00
+2026-01-02T04:11:25.921585002Z ==> No open ports detected, continuing to scan...
+2026-01-02T04:11:26.004740774Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+2026-01-02T04:11:32.289597251Z   Installing build dependencies: started
+2026-01-02T04:11:39.689556937Z   Installing build dependencies: finished with status 'done'
+2026-01-02T04:11:39.689591747Z   Getting requirements to build wheel: started
+2026-01-02T04:11:47.290980646Z   Getting requirements to build wheel: finished with status 'done'
+2026-01-02T04:11:47.292427735Z   Preparing metadata (pyproject.toml): started
+2026-01-02T04:11:51.682774094Z   Preparing metadata (pyproject.toml): finished with status 'done'
+2026-01-02T04:11:55.889557623Z Collecting grpcio-tools<1.64.0,>=1.53.0 (from stability-sdk)
+2026-01-02T04:11:55.901967057Z   Downloading grpcio_tools-1.63.2.tar.gz (5.0 MB)
+2026-01-02T04:11:56.102844174Z      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.0/5.0 MB 24.3 MB/s eta 0:00:00
+2026-01-02T04:12:03.88119089Z   Installing build dependencies: started
+2026-01-02T04:12:11.489679483Z   Installing build dependencies: finished with status 'done'
+2026-01-02T04:12:11.491489827Z   Getting requirements to build wheel: started
+2026-01-02T04:12:16.595402935Z   Getting requirements to build wheel: finished with status 'done'
+2026-01-02T04:12:16.680995673Z   Preparing metadata (pyproject.toml): started
+2026-01-02T04:12:19.985111803Z   Preparing metadata (pyproject.toml): finished with status 'done'
+2026-01-02T04:12:19.987603976Z Requirement already satisfied: python-dotenv in ./.venv/lib/python3.13/site-packages (from stability-sdk) (1.2.1)
+2026-01-02T04:12:20.179839249Z Collecting param (from stability-sdk)
+2026-01-02T04:12:20.191978569Z   Downloading param-2.3.1-py3-none-any.whl.metadata (22 kB)
+2026-01-02T04:12:20.281535819Z Requirement already satisfied: protobuf<6.0.0,>=4.21.12 in ./.venv/lib/python3.13/site-packages (from stability-sdk) (4.25.8)
+2026-01-02T04:12:21.693735968Z Collecting protobuf<6.0.0,>=4.21.12 (from stability-sdk)
+2026-01-02T04:12:21.789945766Z   Downloading protobuf-5.29.5-cp38-abi3-manylinux2014_x86_64.whl.metadata (592 bytes)
+2026-01-02T04:12:23.094545097Z Collecting setuptools (from grpcio-tools<1.64.0,>=1.53.0->stability-sdk)
+2026-01-02T04:12:23.18052267Z   Using cached setuptools-80.9.0-py3-none-any.whl.metadata (6.6 kB)
+2026-01-02T04:12:23.302548378Z Downloading stability_sdk-0.8.6-py3-none-any.whl (117 kB)
+2026-01-02T04:12:23.326574784Z Downloading protobuf-5.29.5-cp38-abi3-manylinux2014_x86_64.whl (319 kB)
+2026-01-02T04:12:23.402727778Z Downloading param-2.3.1-py3-none-any.whl (139 kB)
+2026-01-02T04:12:23.416755343Z Using cached setuptools-80.9.0-py3-none-any.whl (1.2 MB)
+2026-01-02T04:12:23.485263055Z Building wheels for collected packages: grpcio, grpcio-tools
+2026-01-02T04:12:23.486264908Z   Building wheel for grpcio (pyproject.toml): started
+2026-01-02T04:12:26.74644675Z ==> No open ports detected, continuing to scan...
+2026-01-02T04:12:26.842300244Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+2026-01-02T04:13:24.279923893Z   Building wheel for grpcio (pyproject.toml): still running...
+2026-01-02T04:13:27.577752475Z ==> No open ports detected, continuing to scan...
+2026-01-02T04:13:27.660548787Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+2026-01-02T04:14:28.359889861Z ==> No open ports detected, continuing to scan...
+2026-01-02T04:14:28.388906849Z   Building wheel for grpcio (pyproject.toml): still running...
+2026-01-02T04:14:28.454219134Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+2026-01-02T04:15:29.24097466Z ==> No open ports detected, continuing to scan...
+2026-01-02T04:15:29.346347318Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+2026-01-02T04:15:49.656340367Z ==> Port scan timeout reached, no open ports detected. Bind your service to at least one port. If you don't need to receive traffic on any port, create a background worker instead.
+2026-01-02T04:15:49.739840894Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+2026-01-02T04:25:06.425997559Z ==> Timed out: Port scan timeout reached, no open ports detected. Bind your service to at least one port. If you don't need to receive traffic on any port, create a background worker instead.
+2026-01-02T04:25:06.443063148Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
