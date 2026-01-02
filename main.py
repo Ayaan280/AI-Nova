@@ -29,8 +29,8 @@ def get_openai_client():
 openai_client = get_openai_client()
 
 # Hugging Face Setup
-# The previous URL is no longer supported, using the new router URL
-HF_API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-3.5-large"
+# Using Stable Diffusion v1.5 as it's more likely to be available on free tier
+HF_API_URL = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
 HF_HEADERS = {"Authorization": f"Bearer {os.environ.get('HF_API_KEY')}"}
 
 SYSTEM_PROMPT = (
@@ -304,6 +304,12 @@ def generate_image():
                     return jsonify({"image": f"data:image/png;base64,{img_b64}"})
                 else:
                     print(f"HF Error: {hf_response.status_code} - {hf_response.text}")
+                    # Try a second fallback model if the first one fails
+                    alt_url = "https://api-inference.huggingface.co/models/prompthero/openjourney"
+                    alt_response = requests.post(alt_url, headers=HF_HEADERS, json={"inputs": prompt})
+                    if alt_response.status_code == 200:
+                        img_b64 = base64.b64encode(alt_response.content).decode("utf-8")
+                        return jsonify({"image": f"data:image/png;base64,{img_b64}"})
             except Exception as hf_err:
                 print(f"HF error: {hf_err}")
 
