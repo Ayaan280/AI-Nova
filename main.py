@@ -29,7 +29,8 @@ def get_openai_client():
 openai_client = get_openai_client()
 
 # Hugging Face Setup
-HF_API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-3.5-large"
+# The previous URL is no longer supported, using the new router URL
+HF_API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-3.5-large"
 HF_HEADERS = {"Authorization": f"Bearer {os.environ.get('HF_API_KEY')}"}
 
 SYSTEM_PROMPT = (
@@ -277,8 +278,8 @@ def generate_image():
         return jsonify({"error": "No prompt provided."})
     
     try:
-        # 1. Try Replit OpenAI Integration first (If available)
-        if openai_client:
+        # 1. Try Replit OpenAI Integration first (If available and configured)
+        if openai_client and os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY"):
             try:
                 response = openai_client.images.generate(
                     model="gpt-image-1",
