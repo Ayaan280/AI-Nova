@@ -1,10 +1,9 @@
 flask
 groq
 openai
-stability-sdk
 gunicorn
 Pillow
 python-dotenv
 replit
-# Direct grpcio dependencies often fail to compile on certain environments,
-# we'll let pip resolve them as sub-dependencies.
+# Removed stability-sdk from primary requirements to prevent build failure on Render.
+# It will be dynamically handled in main.py if the dependency is missing.
