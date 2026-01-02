@@ -10,6 +10,7 @@ import base64
 import io
 import threading
 import requests
+import time
 
 # ---------------- FLASK APP ----------------
 
@@ -29,9 +30,13 @@ def get_openai_client():
 openai_client = get_openai_client()
 
 # Hugging Face Setup
-# Using Stable Diffusion v1.5 as it's more likely to be available on free tier
-HF_API_URL = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
-HF_HEADERS = {"Authorization": f"Bearer {os.environ.get('HF_API_KEY')}"}
+# We'll try multiple models in order of reliability
+MODELS = [
+    "runwayml/stable-diffusion-v1-5",
+    "prompthero/openjourney",
+    "stabilityai/stable-diffusion-2-1",
+    "stabilityai/stable-diffusion-xl-base-1.0"
+]
 
 SYSTEM_PROMPT = (
     "You speak with Ayaan-style energy: friendly, casual, and lightly playful. "
@@ -268,6 +273,22 @@ def chat():
 
 # ---------------- IMAGE GENERATION API ----------------
 
+def query_hf(model_id, prompt, api_key):
+    url = f"https://api-inference.huggingface.co/models/{model_id}"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    payload = {"inputs": prompt, "options": {"wait_for_model": True}}
+    
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=60)
+        if response.status_code == 200:
+            return response.content
+        else:
+            print(f"HF Error for {model_id}: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"HF Exception for {model_id}: {e}")
+        return None
+
 @app.route("/generate_image", methods=["POST"])
 def generate_image():
     if "username" not in session:
@@ -277,41 +298,22 @@ def generate_image():
     if not prompt:
         return jsonify({"error": "No prompt provided."})
     
+    api_key = os.environ.get("HF_API_KEY")
+    if not api_key:
+        return jsonify({"error": "There was a error generating your image, please try something else other than this image"})
+
     try:
-        # 1. Try Replit OpenAI Integration first (If available and configured)
-        if openai_client and os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY"):
-            try:
-                response = openai_client.images.generate(
-                    model="gpt-image-1",
-                    prompt=prompt,
-                    size="1024x1024"
-                )
-                if response and response.data:
-                    image_url = response.data[0].url
-                    img_response = requests.get(image_url)
-                    if img_response.status_code == 200:
-                        img_b64 = base64.b64encode(img_response.content).decode("utf-8")
-                        return jsonify({"image": f"data:image/png;base64,{img_b64}"})
-            except Exception as openai_err:
-                print(f"OpenAI error: {openai_err}")
-            
-        # 2. Fallback to Hugging Face
-        if os.environ.get("HF_API_KEY"):
-            try:
-                hf_response = requests.post(HF_API_URL, headers=HF_HEADERS, json={"inputs": prompt})
-                if hf_response.status_code == 200:
-                    img_b64 = base64.b64encode(hf_response.content).decode("utf-8")
+        # Try models in loop
+        for model in MODELS:
+            img_data = query_hf(model, prompt, api_key)
+            if img_data:
+                # Check if it's actually an image or an error JSON
+                try:
+                    json.loads(img_data)
+                    continue # It's JSON, probably an error
+                except:
+                    img_b64 = base64.b64encode(img_data).decode("utf-8")
                     return jsonify({"image": f"data:image/png;base64,{img_b64}"})
-                else:
-                    print(f"HF Error: {hf_response.status_code} - {hf_response.text}")
-                    # Try a second fallback model if the first one fails
-                    alt_url = "https://api-inference.huggingface.co/models/prompthero/openjourney"
-                    alt_response = requests.post(alt_url, headers=HF_HEADERS, json={"inputs": prompt})
-                    if alt_response.status_code == 200:
-                        img_b64 = base64.b64encode(alt_response.content).decode("utf-8")
-                        return jsonify({"image": f"data:image/png;base64,{img_b64}"})
-            except Exception as hf_err:
-                print(f"HF error: {hf_err}")
 
         return jsonify({"error": "There was a error generating your image, please try something else other than this image"})
     except Exception as e:
