@@ -7,6 +7,7 @@ import sqlite3
 import ast, operator, re
 from openai import OpenAI
 import base64
+import io
 
 # ---------------- FLASK APP ----------------
 
@@ -14,13 +15,6 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", "dev-secret")
 
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
-
-import base64
-import io
-from stability_sdk import client
-import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
-
-# ... existing imports
 
 # OpenAI client setup (for Replit)
 def get_openai_client():
@@ -33,14 +27,20 @@ def get_openai_client():
 openai_client = get_openai_client()
 
 # Stability AI setup (for External Hosting)
+# Using a dynamic import to avoid build errors on Render if grpcio fails to compile
 def get_stability_api():
     api_key = os.environ.get("STABILITY_API_KEY")
-    if api_key:
-        return client.StabilityInference(
+    if not api_key:
+        return None
+    try:
+        from stability_sdk import client as stability_client
+        return stability_client.StabilityInference(
             key=api_key,
             verbose=True,
         )
-    return None
+    except Exception as e:
+        print(f"Stability SDK error: {e}")
+        return None
 
 stability_api = get_stability_api()
 
@@ -306,6 +306,7 @@ def generate_image():
             
         # 2. Fallback to Stability AI for External Hosting
         if stability_api:
+            import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
             answers = stability_api.generate(
                 prompt=prompt,
                 width=1024,
