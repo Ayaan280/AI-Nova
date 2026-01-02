@@ -28,37 +28,9 @@ def get_openai_client():
 
 openai_client = get_openai_client()
 
-# Stability AI setup (for External Hosting)
-# Global variable to store the API instance
-stability_api = None
-
-def load_stability_api_background():
-    global stability_api
-    api_key = os.environ.get("STABILITY_API_KEY")
-    if not api_key:
-        return
-
-    try:
-        from stability_sdk import client as stability_client
-        stability_api = stability_client.StabilityInference(
-            key=api_key,
-            verbose=True,
-        )
-        print("Stability AI loaded successfully!")
-    except ImportError:
-        import subprocess
-        import sys
-        print("Stability SDK missing. Installing in background...")
-        try:
-            # Install in background to not block startup
-            subprocess.Popen([sys.executable, "-m", "pip", "install", "stability-sdk"])
-        except Exception as e:
-            print(f"Background install failed: {e}")
-    except Exception as e:
-        print(f"Stability setup error: {e}")
-
-# Start the loading/installation in a separate thread so Render sees the port immediately
-threading.Thread(target=load_stability_api_background, daemon=True).start()
+# Hugging Face Setup
+HF_API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-3.5-large"
+HF_HEADERS = {"Authorization": f"Bearer {os.environ.get('HF_API_KEY')}"}
 
 SYSTEM_PROMPT = (
     "You speak with Ayaan-style energy: friendly, casual, and lightly playful. "
@@ -305,7 +277,7 @@ def generate_image():
         return jsonify({"error": "No prompt provided."})
     
     try:
-        # 1. Try Replit OpenAI Integration first
+        # 1. Try Replit OpenAI Integration first (If available)
         if openai_client:
             try:
                 response = openai_client.images.generate(
@@ -314,48 +286,26 @@ def generate_image():
                     size="1024x1024"
                 )
                 if response and response.data:
-                    # Replit returns a URL. Convert to base64 for history storage consistency
                     image_url = response.data[0].url
                     img_response = requests.get(image_url)
                     if img_response.status_code == 200:
                         img_b64 = base64.b64encode(img_response.content).decode("utf-8")
                         return jsonify({"image": f"data:image/png;base64,{img_b64}"})
-                    else:
-                        # Fallback to direct URL if base64 conversion fails
-                        return jsonify({"image": image_url})
             except Exception as openai_err:
                 print(f"OpenAI error: {openai_err}")
-                # Fall through to Stability if OpenAI fails
             
-        # 2. Fallback to Stability AI for External Hosting
-        global stability_api
-        if not stability_api:
-            # Check if it finished installing in background
-            api_key = os.environ.get("STABILITY_API_KEY")
-            if api_key:
-                try:
-                    from stability_sdk import client as stability_client
-                    stability_api = stability_client.StabilityInference(
-                        key=api_key,
-                        verbose=True,
-                    )
-                except ImportError:
-                    pass # Still installing...
-            
-        if stability_api:
-            import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
-            answers = stability_api.generate(
-                prompt=prompt,
-                width=1024,
-                height=1024,
-                samples=1,
-            )
-            for resp in answers:
-                for artifact in resp.artifacts:
-                    if artifact.type == generation.ARTIFACT_IMAGE:
-                        img_b64 = base64.b64encode(artifact.binary).decode("utf-8")
-                        return jsonify({"image": f"data:image/png;base64,{img_b64}"})
-        
+        # 2. Fallback to Hugging Face
+        if os.environ.get("HF_API_KEY"):
+            try:
+                hf_response = requests.post(HF_API_URL, headers=HF_HEADERS, json={"inputs": prompt})
+                if hf_response.status_code == 200:
+                    img_b64 = base64.b64encode(hf_response.content).decode("utf-8")
+                    return jsonify({"image": f"data:image/png;base64,{img_b64}"})
+                else:
+                    print(f"HF Error: {hf_response.status_code} - {hf_response.text}")
+            except Exception as hf_err:
+                print(f"HF error: {hf_err}")
+
         return jsonify({"error": "There was a error generating your image, please try something else other than this image"})
     except Exception as e:
         print(f"Image generation error: {e}")
