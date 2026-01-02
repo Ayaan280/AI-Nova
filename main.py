@@ -310,11 +310,13 @@ def generate_image():
                 response = openai_client.images.generate(
                     model="gpt-image-1",
                     prompt=prompt,
-                    size="1024x1024",
-                    response_format="b64_json"
+                    size="1024x1024"
+                    # Note: response_format='b64_json' is not supported by gpt-image-1 on Replit
                 )
                 if response and response.data:
-                    return jsonify({"image": f"data:image/png;base64,{response.data[0].b64_json}"})
+                    # gpt-image-1 on Replit returns a URL
+                    image_url = response.data[0].url
+                    return jsonify({"image": image_url})
             except Exception as openai_err:
                 print(f"OpenAI error: {openai_err}")
                 # Fall through to Stability if OpenAI fails
