@@ -250,257 +250,187 @@
     </div>
 </div>
 
-<script>
-    let conversations = {};
-    let currentConversationId = null;
-    let imageMode = false;
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
 
-    const chatbox = document.getElementById("chatbox");
-    const messageInput = document.getElementById("message");
-    const sendBtn = document.getElementById("send");
-    const modeToggle = document.getElementById("mode-toggle");
+        let conversations = {};
+        let currentConversationId = null;
 
-    modeToggle.onclick = () => {
-        imageMode = !imageMode;
-        modeToggle.style.background = imageMode ? "#10b981" : "#1d4ed8";
-        modeToggle.textContent = imageMode ? "Chat Mode" : "Generate Image";
-        messageInput.placeholder = imageMode ? "Describe an image to generate..." : "Message Nova...";
-    };
+        const chatbox = document.getElementById("chatbox");
+        const messageInput = document.getElementById("message");
+        const sendBtn = document.getElementById("send");
 
-    const newChatBtn = document.getElementById("new-chat");
-    const logoutBtn = document.getElementById("logout-btn");
+        const newChatBtn = document.getElementById("new-chat");
+        const logoutBtn = document.getElementById("logout-btn");
 
-    const todayDiv = document.getElementById("today-convos");
-    const yesterdayDiv = document.getElementById("yesterday-convos");
-    const olderDiv = document.getElementById("older-convos");
+        const todayDiv = document.getElementById("today-convos");
+        const yesterdayDiv = document.getElementById("yesterday-convos");
+        const olderDiv = document.getElementById("older-convos");
 
-    logoutBtn.onclick = () => {
-        window.location.href = "/logout";
-    };
-
-    async function loadConvos() {
-        const res = await fetch("/load_convos");
-        conversations = await res.json();
-    }
-
-    async function saveConvos() {
-        await fetch("/save_convos", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(conversations)
-        });
-    }
-
-    function createConversation() {
-        const id = "convo-" + Date.now();
-        conversations[id] = {
-            id,
-            title: "New chat",
-            createdAt: new Date().toISOString(),
-            messages: []
+        logoutBtn.onclick = () => {
+            window.location.href = "/logout";
         };
-        currentConversationId = id;
-        saveConvos();
-        renderConversations();
-        renderMessages();
-    }
 
-    function getDayBucket(date) {
-        const now = new Date();
-        const d = new Date(date);
+        async function loadConvos() {
+            const res = await fetch("/load_convos");
+            conversations = await res.json();
+        }
 
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const other = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        async function saveConvos() {
+            await fetch("/save_convos", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(conversations)
+            });
+        }
 
-        const diff = (today - other) / (1000 * 60 * 60 * 24);
-
-        if (diff === 0) return "today";
-        if (diff === 1) return "yesterday";
-        return "older";
-    }
-
-    function renderConversations() {
-        todayDiv.innerHTML = "";
-        yesterdayDiv.innerHTML = "";
-        olderDiv.innerHTML = "";
-
-        const list = Object.values(conversations)
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        for (const convo of list) {
-            const div = document.createElement("div");
-            div.className = "conversation-item" + (convo.id === currentConversationId ? " active" : "");
-            div.textContent = convo.title;
-            div.onclick = () => {
-                currentConversationId = convo.id;
-                renderConversations();
-                renderMessages();
+        function createConversation() {
+            const id = "convo-" + Date.now();
+            conversations[id] = {
+                id,
+                title: "New chat",
+                createdAt: new Date().toISOString(),
+                messages: []
             };
-
-            const bucket = getDayBucket(convo.createdAt);
-            if (bucket === "today") todayDiv.appendChild(div);
-            else if (bucket === "yesterday") yesterdayDiv.appendChild(div);
-            else olderDiv.appendChild(div);
-        }
-    }
-
-    function renderMessages() {
-        chatbox.innerHTML = "";
-        if (!currentConversationId) return;
-
-        const convo = conversations[currentConversationId];
-        for (const msg of convo.messages) {
-            if (msg.type === "image") {
-                const img = document.createElement("img");
-                img.src = msg.text;
-                img.style.maxWidth = "100%";
-                img.style.borderRadius = "8px";
-                img.style.marginTop = "10px";
-                const div = document.createElement("div");
-                div.className = "msg bot";
-                div.appendChild(img);
-                chatbox.appendChild(div);
-            } else {
-                addMessage(msg.text, msg.sender, false);
-            }
-        }
-        chatbox.scrollTop = chatbox.scrollHeight;
-    }
-
-    function addMessage(text, sender, save = true, title = null) {
-        const div = document.createElement("div");
-        div.className = "msg " + sender;
-        div.textContent = text;
-        chatbox.appendChild(div);
-        chatbox.scrollTop = chatbox.scrollHeight;
-
-        if (save) {
-            const convo = conversations[currentConversationId];
-            if (!convo) return; // Guard against missing convo
-            convo.messages.push({ text, sender });
-
-            if (title) {
-                convo.title = title;
-            } else if (sender === "user" && convo.title === "New chat") {
-                // Fallback local title generation if API didn't provide one yet
-                let first = text.split(/[.!?]/)[0].trim();
-                if (first.length > 40) first = first.slice(0, 40) + "...";
-                convo.title = first || "Untitled Conversation";
-            }
-
+            currentConversationId = id;
             saveConvos();
             renderConversations();
+            renderMessages();
         }
-    }
 
-    async function sendMessage() {
-        const text = messageInput.value.trim();
-        if (!text) return;
+        function getDayBucket(date) {
+            const now = new Date();
+            const d = new Date(date);
 
-        if (!currentConversationId) createConversation();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const other = new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
-        addMessage(text, "user");
-        messageInput.value = "";
+            const diff = (today - other) / (1000 * 60 * 60 * 24);
 
-        if (imageMode) {
-            // Show loading message
-            const loadingDiv = document.createElement("div");
-            loadingDiv.className = "msg bot loading-msg";
-            loadingDiv.textContent = "generating your image.......";
-            chatbox.appendChild(loadingDiv);
+            if (diff === 0) return "today";
+            if (diff === 1) return "yesterday";
+            return "older";
+        }
+
+        function renderConversations() {
+            todayDiv.innerHTML = "";
+            yesterdayDiv.innerHTML = "";
+            olderDiv.innerHTML = "";
+
+            const list = Object.values(conversations)
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            for (const convo of list) {
+                const div = document.createElement("div");
+                div.className = "conversation-item" + (convo.id === currentConversationId ? " active" : "");
+                div.textContent = convo.title;
+                div.onclick = () => {
+                    currentConversationId = convo.id;
+                    renderConversations();
+                    renderMessages();
+                };
+
+                const bucket = getDayBucket(convo.createdAt);
+                if (bucket === "today") todayDiv.appendChild(div);
+                else if (bucket === "yesterday") yesterdayDiv.appendChild(div);
+                else olderDiv.appendChild(div);
+            }
+        }
+
+        function renderMessages() {
+            chatbox.innerHTML = "";
+            if (!currentConversationId) return;
+
+            const convo = conversations[currentConversationId];
+            for (const msg of convo.messages) {
+                addMessage(msg.text, msg.sender, false);
+            }
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+        function addMessage(text, sender, save = true, title = null) {
+            const div = document.createElement("div");
+            div.className = "msg " + sender;
+            div.textContent = text;
+            chatbox.appendChild(div);
             chatbox.scrollTop = chatbox.scrollHeight;
 
-            console.log("Loading message added"); // Debug log
+            if (save) {
+                const convo = conversations[currentConversationId];
+                if (!convo) return;
 
-            try {
-                const res = await fetch("/generate_image", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ prompt: text })
-                });
-                const data = await res.json();
-                
-                // Remove loading message
-                loadingDiv.remove();
+                convo.messages.push({ text, sender });
 
-                if (data.image) {
-                    const img = document.createElement("img");
-                    img.src = data.image;
-                    img.style.maxWidth = "100%";
-                    img.style.borderRadius = "8px";
-                    img.style.marginTop = "10px";
-                    const div = document.createElement("div");
-                    div.className = "msg bot";
-                    div.appendChild(img);
-                    chatbox.appendChild(div);
-                    chatbox.scrollTop = chatbox.scrollHeight;
-                    
-                    const convo = conversations[currentConversationId];
-                    convo.messages.push({ text: data.image, sender: "bot", type: "image" });
-                    saveConvos();
-                } else {
-                    addMessage("There was a error generating your image, please try something else other than this image", "bot");
+                if (title) {
+                    convo.title = title;
+                } else if (sender === "user" && convo.title === "New chat") {
+                    let first = text.split(/[.!?]/)[0].trim();
+                    if (first.length > 40) first = first.slice(0, 40) + "...";
+                    convo.title = first || "Untitled Conversation";
                 }
-            } catch (err) {
-                console.error(err);
-                addMessage("There was a error generating your image, please try something else other than this image", "bot");
-            } finally {
-                // Ensure loading message is removed
-                if (loadingDiv.parentNode) {
-                    loadingDiv.remove();
-                }
+
+                saveConvos();
+                renderConversations();
             }
-            return;
         }
 
-        const convo = conversations[currentConversationId];
-        // Prepare history for API
-        const history = convo.messages.map(m => ({
-            role: m.sender === "user" ? "user" : "assistant",
-            content: m.text
-        }));
+        async function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text) return;
 
-        // Removed extra addMessage call that was causing duplicates
+            if (!currentConversationId) createConversation();
 
-        const res = await fetch("/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                message: text,
-                history: history,
-                conversation_id: currentConversationId
-            })
+            addMessage(text, "user");
+            messageInput.value = "";
+
+            const convo = conversations[currentConversationId];
+
+            const history = convo.messages.map(m => ({
+                role: m.sender === "user" ? "user" : "assistant",
+                content: m.text
+            }));
+
+            const res = await fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message: text,
+                    history: history,
+                    conversation_id: currentConversationId
+                })
+            });
+
+            if (!res.ok) {
+                addMessage("An error occurred. Please try again.", "bot");
+                return;
+            }
+
+            const data = await res.json();
+            addMessage(data.reply, "bot", true, data.title);
+        }
+
+        sendBtn.onclick = sendMessage;
+        messageInput.addEventListener("keydown", e => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sendMessage();
+            }
         });
 
-        if (!res.ok) {
-            addMessage("An error occurred. Please try again.", "bot");
-            return;
-        }
+        newChatBtn.onclick = createConversation;
 
-        const data = await res.json();
-        addMessage(data.reply, "bot", true, data.title);
-    }
+        (async () => {
+            await loadConvos();
+            const list = Object.values(conversations);
+            if (list.length === 0) createConversation();
+            else currentConversationId = list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0].id;
 
-    sendBtn.onclick = sendMessage;
-    messageInput.addEventListener("keydown", e => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            sendMessage();
-        }
+            renderConversations();
+            renderMessages();
+        })();
+
     });
-
-    newChatBtn.onclick = createConversation;
-
-    (async () => {
-        await loadConvos();
-        const list = Object.values(conversations);
-        if (list.length === 0) createConversation();
-        else currentConversationId = list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0].id;
-
-        renderConversations();
-        renderMessages();
-    })();
-</script>
+    </script>
 
 </body>
 </html>
